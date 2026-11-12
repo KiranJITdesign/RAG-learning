@@ -8,7 +8,7 @@ import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
-DATA_DIR = ROOT / "data" / "schemes"
+DATA_DIR = ROOT / "data" / "policies"
 INDEX_DIR = ROOT / "data" / "index"
 INDEX_DB = INDEX_DIR / "index.sqlite3"
 

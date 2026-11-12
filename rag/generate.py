@@ -1,11 +1,5 @@
 """Step 2 of answering: prompt building, the extractive fallback, and the
 citation check that decides whether an answer is trustworthy.
-
-Two things here are what separate a demo from something you would put in front
-of a real user:
-
-* the prompt refuses to answer without sources, and
-* the code *checks* the model's answer afterwards instead of trusting it.
 """
 from __future__ import annotations
 
@@ -19,25 +13,18 @@ from .retrieve import Hit, content_terms
 CITATION = re.compile(r"\[S(\d+)\]")
 SENTENCE = re.compile(r"(?<=[.!?])\s+")
 
-SYSTEM_PROMPT = """You are SchemeSaathi, an assistant that explains Indian government \
-welfare schemes to ordinary citizens.
+SYSTEM_PROMPT = """You are Internal Ops Co-Pilot, an intelligent corporate assistant for employees and new hires. \
+You answer IT support, HR policy, hardware setup, security, and onboarding questions grounded strictly in internal company documentation.
 
-You will be given numbered source passages. Follow these rules exactly.
+You will be given numbered source passages. Follow these rules exactly:
 
-1. Use ONLY the numbered sources. Do not use any outside knowledge, and do not
-   guess. If the sources do not contain the answer, reply with one line:
-   NOT_FOUND: <what information is missing>.
-2. Put a citation marker after every factual claim, using the source number:
-   [S1], [S2]. A paragraph with no citation is a defect.
-3. Be concrete. Give the exact amount, age limit, income ceiling, number of
-   days, or document name when the sources state it. Never round or invent a
-   number.
-4. Never invent a scheme name, portal, helpline number or rupee figure.
-5. If the sources disagree or are silent on a detail the user needs, say so
-   plainly in one sentence.
-6. Keep the answer under 180 words. Use short paragraphs, or a short list when
-   you are enumerating eligibility conditions or documents.
-7. Write plainly for someone reading on a phone. No marketing tone.
+1. Always provide a structured, beautifully formatted answer:
+   - Begin with a clear, direct summary line.
+   - Use distinct bullet points (• or -) with bold headers for each policy rule, entitlement, or eligibility criterion.
+   - For IT troubleshooting instructions, use a clean numbered sequence (1., 2., 3.).
+2. Put a citation marker after every factual claim, using the source number: [S1], [S2].
+3. For IT failures, note that an automated IT support ticket can be logged if the steps do not resolve the issue.
+4. Keep the answer professional, concise, and easy to scan.
 """
 
 
@@ -84,7 +71,7 @@ def build_prompt(question: str, hits: list[Hit]) -> str:
     return (
         f"SOURCE PASSAGES\n{context}\n\n"
         f"QUESTION\n{question}\n\n"
-        "Answer using only the passages above, with [S#] citations."
+        "Provide a structured, formatted answer using only the passages above, with [S#] citations."
     )
 
 
@@ -107,30 +94,18 @@ def _sentences(text: str) -> list[str]:
     out = []
     for raw in SENTENCE.split(text):
         sentence = " ".join(raw.split()).lstrip("-*\u2022 ").strip()
-        if len(sentence.split()) > 6:
+        if len(sentence.split()) > 5:
             out.append(sentence)
     return out
 
 
-def extractive_answer(question: str, hits: list[Hit], max_sentences: int = 4) -> str:
-    """No LLM: pick the sentences that best answer the question and quote them.
-
-    The scoring is deliberately simple and readable: word overlap with the
-    question, a bonus for a sentence that actually contains a number when the
-    question asks for a quantity, and a bonus for coming from a higher-ranked
-    chunk. You can see every term of it, which is the point - this is the
-    "generation" step in its crudest form.
-
-    It is not a substitute for an LLM. It reads like a stack of quotes, and it
-    will miss a figure that sits in a sentence sharing no words with the
-    question. Run eval/run_eval.py before and after switching LLM_PROVIDER to
-    see exactly what the LLM buys you.
-    """
+def extractive_answer(question: str, hits: list[Hit], max_sentences: int = 5) -> str:
+    """Formatted extraction of key policy points with citations."""
     terms = content_terms(question)
     if not terms:
         return "NOT_FOUND: the question has no searchable content words."
     wants_number = bool(
-        re.search(r"how (much|many|long|old)|rate|limit|amount|ceiling|age", question, re.I)
+        re.search(r"how (much|many|long|old)|rate|limit|amount|ceiling|age|days", question, re.I)
     )
     candidates: list[tuple[float, int, str]] = []
     for index, hit in enumerate(hits, start=1):
@@ -157,11 +132,15 @@ def extractive_answer(question: str, hits: list[Hit], max_sentences: int = 4) ->
         if len(picked) >= max_sentences:
             break
     picked.sort(key=lambda item: item[0])
-    body = " ".join(f"{sentence} [S{index}]" for index, sentence in picked)
-    return (
-        "Here is what the documents say, quoted directly "
-        "(extractive mode - set LLM_PROVIDER for a written answer):\n\n" + body
-    )
+
+    bullets = []
+    for index, sentence in picked:
+        clean = re.sub(r"^\s*[-*#]+\s*", "", sentence).strip()
+        if clean.count("**") % 2 != 0:
+            clean = clean.replace("**", "")
+        bullets.append(f"• {clean} [S{index}]")
+
+    return "**Key Policy Points & Details:**\n\n" + "\n".join(bullets)
 
 
 def generate(
