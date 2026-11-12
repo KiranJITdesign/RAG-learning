@@ -1,264 +1,457 @@
-SchemeSaathi
-A RAG system that answers questions about Indian government welfare schemes — and refuses when it doesn't know.
+# SchemeSaathi – RAG Learning
 
-Built from scratch, no framework, every step readable in one sitting.
+### A Retrieval-Augmented Generation (RAG) system for Indian Government Welfare Schemes
 
-Python 3.9+ · runs offline, no API key · 17 tests passing · hit@5 100% · abstain accuracy 93%
+SchemeSaathi is a Python-based RAG application that answers questions about Indian government welfare schemes using a collection of scheme documents. It retrieves relevant information, provides source citations, and abstains from answering when sufficient evidence is unavailable.
 
-Quickstart · How it works · Results · Design decisions · Roadmap · Learn RAG in a week [blocked]
+The project is built from scratch to make every stage of the RAG pipeline understandable.
 
-The problem
-India runs thousands of welfare schemes across the centre and the states. Most people who are entitled to one cannot find out which one applies to them, what the conditions are, or which office to walk into. The information exists — spread across dozens of PDFs written in bureaucratic English.
+<p align="center">
 
-What this builds
-A question-answering assistant over scheme documents. You ask in plain language:
+![Python](https://img.shields.io/badge/Python-3.9+-blue?logo=python)
+![Streamlit](https://img.shields.io/badge/UI-Streamlit-red?logo=streamlit)
+![SQLite](https://img.shields.io/badge/Database-SQLite-blue?logo=sqlite)
+![Tests](https://img.shields.io/badge/Tests-17%20Passing-success)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-"I am a SC student doing B.Com, family income 1.8 lakh, is there a scholarship?"
+</p>
 
-and it answers only from the documents, quoting the passage it came from, or it says it doesn't know.
+---
 
+## Table of Contents
 
+- [Problem Statement](#problem-statement)
+- [Project Overview](#project-overview)
+- [Key Features](#key-features)
+- [Example](#example)
+- [System Architecture](#system-architecture)
+- [Technology Stack](#technology-stack)
+- [Project Structure](#project-structure)
+- [Installation](#installation)
+- [Usage](#usage)
+- [Evaluation Results](#evaluation-results)
+- [RAG Pipeline](#rag-pipeline)
+- [Design Decisions](#design-decisions)
+- [Future Enhancements](#future-enhancements)
+- [Limitations](#limitations)
+- [Disclaimer](#disclaimer)
 
-$ python ask.py "How much does PM-KISAN pay and who is excluded?"
+---
 
-An income support of Rs 6,000 per year, paid in three equal instalments of
-Rs 2,000 each, directly into the bank account of the farmer family. [S1]
-The following categories are explicitly excluded, even if they own farmland:
-Institutional landholders, and farmer families where a member is a
-constitutional post holder ... [S3]
+## Problem Statement
 
-Sources
-  [S1] PM-KISAN Samman Nidhi > What this scheme gives you
-        https://pmkisan.gov.in
-  [S3] PM-KISAN Samman Nidhi > Who is NOT eligible
+India has thousands of central and state government welfare schemes. However, many eligible citizens struggle to identify schemes, understand eligibility conditions, and find application procedures.
 
+The information is often distributed across multiple PDF documents and government websites, making it difficult to access.
 
-$ python ask.py "What is the capital of France?"
+SchemeSaathi addresses this problem through a document-based question-answering system that allows users to ask questions in simple language.
 
-I could not answer that from the documents I have. The closest material I
-found is: PM SVANidhi street vendor working capital loan, PM-KISAN Samman
-Nidhi. This assistant only answers from its own scheme summaries, so it will
-not guess.
-Why this is a good RAG project
-The domain punishes guessing. A hallucinated ₹5 lakh or a wrong income ceiling is worse than no answer, so every part of the pipeline has to earn its place: retrieval quality, citation enforcement, and an explicit "I don't know" path. RAG is not decoration here — it is the only way the thing can work.
+## Project Overview
 
-It also forces the problems that tutorials skip:
+SchemeSaathi uses Retrieval-Augmented Generation (RAG) to retrieve relevant information from government welfare scheme documents.
 
+Users can ask questions such as:
 
+> I am an SC student pursuing B.Com, and my family income is ₹1.8 lakh. Am I eligible for a scholarship?
 
+The system retrieves relevant passages and generates an answer based on available information.
 
-What a tutorial does	What this project has to do
-Embed and cosine-search	Add BM25 — embeddings are blind to PM-JAY, 14555, ₹10,000
-One big index	Metadata filters — rural vs urban, scheme category
-Always answers	An abstain gate with a measured false-positive rate
-"The answer looks right"	Citation validation in code, not vibes
-Trust the demo	A 30-question eval harness with 5 metrics
-Quickstart
-bash
+If the retrieved documents do not contain sufficient evidence, the system can refuse to answer rather than guess.
 
+### Main Objectives
 
-git clone https://github.com/KiranJITdesign/RAG-learning.git
-cd RAG-learning
-pip install -r requirements.txt
+- Make government scheme information easier to access.
+- Retrieve relevant information from scheme documents.
+- Provide answers with source references.
+- Reduce unsupported or misleading answers.
+- Demonstrate the complete RAG pipeline from ingestion to evaluation.
 
-python ingest.py                                       # build the index (~1 s)
-python ask.py "I am a small farmer, what money can I get?"
-python ask.py --debug "how many days of work does MGNREGA guarantee?"
-streamlit run app.py                                   # the web UI
-No API key, no model download, no Docker. The default configuration uses a zero-dependency embedder and quotes passages instead of calling an LLM, so the project runs on any laptop, offline, in about a second.
+---
 
-Two commands you will use constantly:
+## Key Features
 
-bash
+### 1. Document Ingestion
+- Loads scheme documents in Markdown format.
+- Extracts document metadata.
+- Processes documents into structured chunks.
 
+### 2. Hybrid Search
+- Combines dense vector retrieval and BM25 keyword search.
+- Uses Reciprocal Rank Fusion (RRF).
+- Improves retrieval of scheme names, abbreviations, and numerical information.
 
-python -m pytest -q          # 17 unit tests, under a second, no network
-python eval/run_eval.py      # the numbers in the Results section below
-How it works
-Two phases. Keeping them separate in your head is the single most useful mental model for RAG.
+### 3. Metadata Filtering
+- Supports filtering based on rural and urban categories.
+- Supports scheme-category filtering.
+- Restricts retrieval to relevant documents.
 
-Phase 1 — Ingestion (once per document set)
+### 4. Citation-Based Answers
+- Includes source references such as `[S1]`, `[S2]`.
+- Validates citations against available sources.
+- Helps users identify the supporting document.
 
+### 5. Abstention Mechanism
+- Detects questions that cannot be answered from the available documents.
+- Returns an explicit "I could not answer that" response.
+- Avoids presenting unsupported information as fact.
 
-data/schemes/*.md
-   │  rag/loaders.py      read the file, parse the metadata header
-   ▼
-Document(doc_id, title, body, meta)
-   │  rag/chunker.py      split on headings, then by size, keeping the heading
-   ▼                     inside the text that gets embedded
-Chunk(embed_text, section, meta)
-   │  rag/embedder.py     text → vector
-   ▼
-(60 × 512) matrix
-   │  rag/store.py        SQLite: text, metadata, float32 vector
-   ▼
-data/index/index.sqlite3
-Phase 2 — Answering (per question)
+### 6. Evaluation Framework
+- Includes a labelled question dataset.
+- Measures retrieval quality and answer grounding.
+- Tests whether the system answers or refuses appropriately.
 
+### 7. Local Execution
+- Runs locally on a computer.
+- Does not require an API key in its default configuration.
+- Uses SQLite for storage.
 
-question
-   │  rag/embedder.py + rag/bm25.py    two retrievers, in parallel
-   ▼
-dense hits + keyword hits
-   │  rag/retrieve.py                  Reciprocal Rank Fusion → one ranked list
-   ▼
-top-5 passages
-   │  rag/retrieve.py                  answerability gate
-   │                                   → not enough evidence? abstain, say so
-   ▼
-   │  rag/generate.py                  prompt with [S1]..[S5]
-   │                                   → citation check on the way out
-   ▼
-Answer(text, citations, sources, confidence)
-rag/pipeline.py is the only file that knows this order. Read build_index() and RAG.ask() first — forty lines that call everything else in sequence.
+---
 
-Project structure
+## Example
 
+### Example 1: Answerable Question
 
+**Question:**
+```text
+How much does PM-KISAN pay and who is excluded?
+```
+
+**Response:**
+
+The PM-KISAN scheme provides ₹6,000 per year in three equal instalments of ₹2,000 each, directly into the bank account of the farmer family.
+
+The system also identifies excluded categories based on the available scheme documents.
+
+**Sources:** `[S1]`, `[S3]`
+
+### Example 2: Unanswerable Question
+
+**Question:**
+```text
+What is the capital of France?
+```
+
+**Response:**
+
+```text
+I could not answer that from the documents I have.
+```
+
+The system does not attempt to answer unrelated questions using unsupported information.
+
+---
+
+## System Architecture
+
+### RAG Pipeline
+
+```mermaid
+flowchart TD
+    A[Scheme Documents] --> B[Document Loader]
+    B --> C[Metadata Extraction]
+    C --> D[Document Chunking]
+    D --> E[Embedding Generation]
+    E --> F[SQLite Vector Store]
+
+    G[User Question] --> H[Query Processing]
+    H --> I[Dense Retrieval]
+    H --> J[BM25 Retrieval]
+
+    I --> K[Reciprocal Rank Fusion]
+    J --> K
+
+    K --> L[Top 5 Relevant Chunks]
+    L --> M[Answerability Check]
+
+    M -->|Sufficient Evidence| N[Answer Generation]
+    M -->|Insufficient Evidence| O[Abstain]
+
+    N --> P[Citation Validation]
+    P --> Q[Final Answer]
+    O --> Q
+```
+
+### Two Main Phases
+
+**Phase 1 – Ingestion**
+
+1. Read scheme documents.
+2. Extract document metadata.
+3. Split documents into meaningful chunks.
+4. Generate embeddings.
+5. Store text, metadata, and vectors in SQLite.
+
+**Phase 2 – Question Answering**
+
+1. Receive a user question.
+2. Perform dense and keyword retrieval.
+3. Combine results using Reciprocal Rank Fusion.
+4. Select the top five relevant passages.
+5. Check whether sufficient evidence exists.
+6. Generate an answer or abstain.
+7. Validate source citations.
+
+---
+
+## Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| Python 3.9+ | Core application |
+| NumPy | Vector operations |
+| SQLite | Local data storage |
+| Streamlit | Web interface |
+| BM25 | Keyword retrieval |
+| Embeddings | Semantic retrieval |
+| Pytest | Unit testing |
+
+**Architecture:** Custom-built RAG pipeline without LangChain, LlamaIndex, or a separate vector database server.
+
+---
+
+## Project Structure
+
+```text
 RAG-learning/
-├── config.py              every knob in one place
-├── ingest.py              CLI: build the index
-├── ask.py                 CLI: ask a question
-├── app.py                 Streamlit UI
+│
+├── app.py                  # Streamlit web application
+├── ask.py                  # Question-answering CLI
+├── ingest.py               # Document ingestion
+├── config.py               # Configuration settings
+├── requirements.txt        # Python dependencies
+├── .env.example            # Example environment variables
+│
 ├── rag/
-│   ├── loaders.py         file → Document + metadata
-│   ├── chunker.py         Document → Chunks  (structure-aware)
-│   ├── embedder.py        text → vector (3 interchangeable backends)
-│   ├── bm25.py            keyword retrieval, no dependency
-│   ├── store.py           SQLite + numpy vector store
-│   ├── retrieve.py        fusion, filters, abstain gate
-│   ├── llm.py             4 LLM providers, one HTTP POST each
-│   ├── generate.py        prompt, citations, extractive mode
-│   └── pipeline.py        build_index() and ask()
-├── data/schemes/          10 scheme documents (markdown + metadata header)
+│   ├── loaders.py          # Document loading
+│   ├── chunker.py          # Document chunking
+│   ├── embedder.py         # Embedding generation
+│   ├── bm25.py             # Keyword retrieval
+│   ├── store.py            # SQLite vector storage
+│   ├── retrieve.py         # Retrieval and ranking
+│   ├── llm.py              # LLM integrations
+│   ├── generate.py         # Answer generation
+│   └── pipeline.py         # Main RAG pipeline
+│
+├── data/
+│   ├── schemes/            # Scheme documents
+│   └── index/              # Generated index
+│
 ├── eval/
-│   ├── questions.jsonl    30 labelled questions, 7 must be refused
-│   └── run_eval.py        hit@k, MRR, abstain accuracy, grounding
-├── tests/test_rag.py      17 tests
-├── LEARN.md               7-day guided build-it-yourself path
+│   ├── questions.jsonl     # Evaluation questions
+│   └── run_eval.py         # Evaluation script
+│
+├── tests/
+│   └── test_rag.py         # Unit tests
+│
+├── LEARN.md                # Seven-day RAG learning guide
 └── README.md
-Results
-Measured on this repository — hashing embedder, extractive mode, k=5, 60 chunks, 30 questions:
+```
 
+---
 
+## Installation
 
+### Prerequisites
 
-Metric	Score	What it means
-hit@5	100% (23/23)	the right document always made the top 5
-MRR	1.000	and it was ranked first every time
-answer/abstain	93% (28/30)	answered when it should, refused when it should
-key fact present	83% (19/23)	the answer contained the expected figure (6,000, 5 lakh, …)
-citation grounded	100% (23/23)	every answer carried valid [S#] markers
-Reproduce it:
+- Python 3.9 or later
+- Git
+- pip
 
-bash
+### 1. Clone the Repository
 
+```bash
+git clone https://github.com/KiranJITdesign/RAG-learning.git
+```
 
-python ingest.py && python eval/run_eval.py
-The six failures are documented, not hidden — each one is a specific lesson:
+### 2. Navigate to the Project
 
+```bash
+cd RAG-learning
+```
 
+### 3. Create a Virtual Environment
 
+**Windows:**
 
-Failure	Cause	Fix
-"no PF" doesn't match "unorganised sector"	lexical gap	EMBED_BACKEND=sentence-transformers
-Quotes a sentence that shares words but not the number	no generator	LLM_PROVIDER=ollama
-"capital of France" answered via "working capital loan"	one shared word	reranker or an LLM relevance check
-"income tax slab for a freelancer" answered	same	same
-That is the honest state of a lexical system with no LLM — and it is the baseline your improvements have to beat.
+```powershell
+python -m venv venv
+venv\Scripts\activate
+```
 
-Five decisions that make this more than a demo
-1. Chunk on structure, and embed the heading with the text. chunker.py splits on markdown headings first, so a chunk never begins mid-rule. Every chunk is prefixed with Title | Section before embedding. A bare sentence "The applicant must be a landholding farmer family" is unfindable; "PM-KISAN Samman Nidhi | Who is eligible — The applicant..." is not.
+**Linux / macOS:**
 
-2. Hybrid retrieval, not just embeddings. Vector search is bad at exactly what citizens type: scheme names, acronyms and numbers. retrieve.py runs dense + BM25 and fuses them with Reciprocal Rank Fusion, which needs no score normalisation and no tuning.
+```bash
+python3 -m venv venv
+source venv/bin/activate
+```
 
-bash
+### 4. Install Dependencies
 
+```bash
+pip install -r requirements.txt
+```
 
-python ask.py --mode dense "PM-JAY 5 lakh"
-python ask.py --mode bm25  "PM-JAY 5 lakh"
-python ask.py              "PM-JAY 5 lakh"     # hybrid, usually best
-3. Metadata filters, because "eligible" is relative. Each document carries who: rural|urban|all and a category. --filter who=rural restricts retrieval before ranking, so a rural land question can't retrieve a street-vendor loan. Values of all match any filter.
+### 5. Build the Search Index
 
-4. An explicit abstain path. answerability() asks whether the question's words appear in what was retrieved, weighted by how rare those words are — plus a rule that one incidental word is never enough unless it matches a scheme name. If not, ask() returns "I could not answer that" plus the closest titles. A system that says I don't know is more useful than one that is confidently wrong about money.
+```bash
+python ingest.py
+```
 
-5. Check the answer after you get it. validate_citations() counts how many sentences carry a [S#] marker and strips markers pointing at sources that don't exist. An answer where fewer than half the sentences are cited is flagged grounded: False and the UI warns the user. Never trust a generated answer because it reads well — check it in code.
+---
 
-Making it better
-A real embedding model
-bash
+## Usage
 
+### Ask Questions Through the Command Line
 
-pip install sentence-transformers
-python ingest.py --backend sentence-transformers --reset
+```bash
+python ask.py "I am a small farmer, what financial support is available?"
+```
+
+### Enable Debug Mode
+
+```bash
+python ask.py --debug "How many days of work does MGNREGA guarantee?"
+```
+
+### Run the Web Application
+
+```bash
+streamlit run app.py
+```
+
+### Run Unit Tests
+
+```bash
+python -m pytest -q
+```
+
+### Run the Evaluation
+
+```bash
 python eval/run_eval.py
-Downloads a ~90 MB model once. Expect the "no PF" style failures to disappear. The index must be rebuilt — the vectors have a different dimension, and RAG refuses to silently mix them.
-
-A real LLM
-bash
-
-
-cp .env.example .env
-Free and local (recommended first step):
-
-bash
-
-
-# install ollama from ollama.com, then:
-ollama pull llama3.2
-ollama serve
-# in .env:  LLM_PROVIDER=ollama
-Or a hosted key: LLM_PROVIDER=openai | gemini | anthropic. Then re-run the eval and compare key fact present with the baseline above. If it doesn't improve, your retrieval is the bottleneck, not the model — which is the most useful lesson in the whole project.
-
-Your own documents
-The ten files in data/schemes/ are short plain-language summaries written for this project. They are not official. To use real guidelines:
-
-Download official PDFs from myscheme.gov.in or the ministry site.
-pip install pypdf, drop them into data/schemes/.
-Optionally add a metadata header for filtering:
-markdown
-
+```
 
 ---
-id: pm-kisan
-title: PM-KISAN Samman Nidhi
-category: farmer-income-support
-who: rural
-source: https://pmkisan.gov.in
+
+## Evaluation Results
+
+The following results are reported by the project's evaluation dataset using the hashing embedder, extractive mode, top-k of 5, and 60 chunks.
+
+| Evaluation Metric | Result |
+|---|---:|
+| Hit@5 | 100% (23/23) |
+| Mean Reciprocal Rank (MRR) | 1.000 |
+| Answer / Abstain Accuracy | 93% (28/30) |
+| Key Fact Present | 83% (19/23) |
+| Citation Grounding | 100% (23/23) |
+
+### What These Metrics Mean
+
+- **Hit@5:** Whether the relevant document appears in the top five retrieved results.
+- **MRR:** How highly the first relevant result is ranked.
+- **Answer / Abstain Accuracy:** Whether the system correctly answers or refuses.
+- **Key Fact Present:** Whether the expected important information appears in the answer.
+- **Citation Grounding:** Whether answers contain valid source references.
+
+Reproduce the evaluation:
+
+```bash
+python ingest.py
+python eval/run_eval.py
+```
+
 ---
-python ingest.py --reset
-Ten real PDFs give a few hundred chunks — still instant. At a few thousand, swap rag/store.py for FAISS or pgvector; nothing else changes.
 
-Known limitations
-The documents are summaries, not the law. Every figure can change with a cabinet decision. The UI carries a disclaimer; keep it.
-The abstain gate is lexical. It catches obviously off-topic questions and can be fooled by a single shared word. A semantic embedder or reranker fixes most of it.
-Extractive mode is not an answer. It is a stack of quotations, and it exists so the pipeline runs with no keys.
-English only. Real users ask in Hindi, Tamil, Bengali. A multilingual embedder plus translation at the edges is the obvious next project.
-No memory. "What about my wife?" won't resolve against the previous turn. Query rewriting is a well-known fix and a good exercise.
-Personal data. If you deploy this, don't log the questions. People type their caste, income and health conditions into a box like this; under India's DPDP Act that is personal data with real obligations.
-It is not advice. An eligibility answer is a starting point for a conversation at the Panchayat or the bank, not a decision.
-Roadmap
- Conversational memory — rewrite the follow-up using the last two turns before retrieving. Biggest UX win per line of code.
- Reranker — retrieve 20, cross-encode to pick 5.
- Answer-level self-check — mark each sentence supported or not by its cited source; drop the unsupported ones.
- Multilingual — multilingual embedder, answer in the user's language, keep [S#] intact.
- Feedback loop — a thumbs-down button logging the question and retrieved doc ids, so the eval set grows from real failures.
- Real corpus — official PDFs from myscheme.gov.in, including the tables and footnotes that break naive parsers.
-Learn RAG with this repo
-LEARN.md [blocked] is a seven-day path: what to read in what order, what to break on purpose, and one experiment per day that moves the numbers in the Results table. Each day has a measurable task — four chunk sizes, three retrieval modes, trying to fool the abstain gate, swapping in a real LLM.
+## Design Decisions
 
-Five sentences worth memorising
+### 1. Structure-Aware Chunking
 
-Retrieval quality caps answer quality. Fix retrieval first, always.
-Chunk on structure, and embed the heading with the text.
-Hybrid retrieval beats either retriever alone, because names and meaning fail differently.
-An abstain path is a feature, not a bug.
-If you did not measure it, you do not know whether it improved.
-Built with
-Python 3.9+ · numpy · Streamlit · SQLite (stdlib) · pytest
+Documents are split using headings and content size. Headings are retained in the chunk text to preserve context.
 
-No LangChain, no LlamaIndex, no vector database server. Deliberately — so you can see every step, and so there is no magic to debug.
+### 2. Hybrid Retrieval
 
-Disclaimer
-A learning project. The scheme summaries are illustrative and may be out of date; verify every figure on the official portal before acting on it. Not affiliated with any government body.
+Dense retrieval captures semantic similarity, while BM25 identifies exact keywords, scheme names, abbreviations, and numbers.
 
+### 3. Reciprocal Rank Fusion
+
+Combines the rankings from dense and keyword retrieval without requiring score normalization.
+
+### 4. Metadata Filtering
+
+Uses metadata such as rural, urban, and scheme category to improve retrieval relevance.
+
+### 5. Explicit Abstention
+
+The system can refuse to answer when retrieved evidence is insufficient.
+
+### 6. Citation Validation
+
+Checks source references before returning the final response.
+
+---
+
+## Future Enhancements
+
+- Conversational memory for follow-up questions.
+- Reranking retrieved passages.
+- Multilingual support for Hindi, Kannada, Tamil, and other Indian languages.
+- Improved semantic answerability detection.
+- Answer-level factual verification.
+- User feedback and evaluation improvements.
+- Integration of official government scheme PDFs.
+- Improved document parsing for tables and footnotes.
+
+---
+
+## Limitations
+
+- The current scheme documents are illustrative summaries, not official legal documents.
+- The abstention mechanism is primarily lexical and can make mistakes.
+- Extractive mode returns quotations rather than fully generated answers.
+- English is the primary supported language.
+- The system does not currently provide conversational memory.
+- Scheme details may change over time.
+
+---
+
+## Learning RAG
+
+This repository also includes `LEARN.md`, a seven-day guided learning path.
+
+It covers:
+
+1. Understanding document loading and chunking.
+2. Exploring embeddings.
+3. Implementing keyword search.
+4. Understanding hybrid retrieval.
+5. Testing the abstention mechanism.
+6. Integrating an LLM.
+7. Evaluating retrieval and answer quality.
+
+The goal is to understand how RAG works by building and experimenting with each component.
+
+---
+
+## Disclaimer
+
+SchemeSaathi is an educational learning project. The scheme summaries are illustrative and may not reflect the latest government rules or eligibility requirements.
+
+Always verify scheme details, eligibility, benefits, and application procedures through official government portals before making decisions.
+
+This project is not affiliated with any government department or organization.
+
+---
+
+## License
+
+This project is intended to be released under the MIT License. Add a `LICENSE` file to the repository to make the licensing terms explicit.
+
+---
+
+<p align="center">
+
+**Built to understand RAG from the ground up.**
+
+[GitHub Repository](https://github.com/KiranJITdesign/RAG-learning)
+
+</p>
