@@ -1,0 +1,14 @@
+# ---- core: this is all you need for the CLI, the tests and the eval ----
+numpy>=1.24
+
+# ---- web UI (app.py) ----
+streamlit>=1.32
+
+# ---- tests ----
+pytest>=7.4
+
+# ---- optional upgrades, uncomment when you want them ----
+# sentence-transformers>=2.7   # real semantic embeddings, downloads ~90 MB once
+# pypdf>=4.0                   # only needed if you ingest .pdf files
+# python-dotenv>=1.0           # so config.py reads your .env automatically
+# requests>=2.31               # only needed for the ollama/openai/gemini providers

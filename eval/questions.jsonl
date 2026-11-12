@@ -1,0 +1,30 @@
+{"id": "q01", "question": "I am a small farmer with 2 acres. How much money does PM-KISAN give me each year?", "expected_docs": ["pm-kisan"], "must_contain": ["6,000"], "should_abstain": false}
+{"id": "q02", "question": "I pay income tax. Can I still get PM-KISAN?", "expected_docs": ["pm-kisan"], "must_contain": ["income tax"], "should_abstain": false}
+{"id": "q03", "question": "What documents do I need to apply for PM-KISAN?", "expected_docs": ["pm-kisan"], "must_contain": ["Aadhaar"], "should_abstain": false}
+{"id": "q04", "question": "My family has six members. How much hospital cover do we get under Ayushman Bharat?", "expected_docs": ["ayushman-bharat-pmjay"], "must_contain": ["5 lakh"], "should_abstain": false}
+{"id": "q05", "question": "Is there any age limit or family size limit for the Ayushman card?", "expected_docs": ["ayushman-bharat-pmjay"], "must_contain": ["no cap on family size"], "should_abstain": false}
+{"id": "q06", "question": "My mother is 72 years old. Is she covered by any government health scheme?", "expected_docs": ["ayushman-bharat-pmjay"], "must_contain": ["70"], "should_abstain": false}
+{"id": "q07", "question": "How many days of work am I guaranteed under MGNREGA in a year?", "expected_docs": ["mgnrega"], "must_contain": ["100 days"], "should_abstain": false}
+{"id": "q08", "question": "How do I get a MGNREGA job card?", "expected_docs": ["mgnrega"], "must_contain": ["Panchayat"], "should_abstain": false}
+{"id": "q09", "question": "My MGNREGA wages have not come for two months. What can I do?", "expected_docs": ["mgnrega"], "must_contain": ["15 days"], "should_abstain": false}
+{"id": "q10", "question": "How much money does the government give to build a house in a village?", "expected_docs": ["pmay-gramin"], "must_contain": ["1.20 lakh"], "should_abstain": false}
+{"id": "q11", "question": "Can a house be in my husband's name alone under PMAY Gramin?", "expected_docs": ["pmay-gramin"], "must_contain": ["woman"], "should_abstain": false}
+{"id": "q12", "question": "How much grain does a family get on a ration card every month?", "expected_docs": ["nfsa-pds"], "must_contain": ["5 kg"], "should_abstain": false}
+{"id": "q13", "question": "Is the ration grain free right now?", "expected_docs": ["nfsa-pds"], "must_contain": ["free"], "should_abstain": false}
+{"id": "q14", "question": "I want to open a Sukanya Samriddhi account for my daughter who is 4. What is the maximum I can deposit in a year?", "expected_docs": ["sukanya-samriddhi"], "must_contain": ["1.5 lakh"], "should_abstain": false}
+{"id": "q15", "question": "My daughter is 12 years old. Can I still open a Sukanya Samriddhi account for her?", "expected_docs": ["sukanya-samriddhi"], "must_contain": ["10"], "should_abstain": false}
+{"id": "q16", "question": "I am a Scheduled Caste student doing B.Com with family income of 1.8 lakh. Is there a scholarship?", "expected_docs": ["post-matric-sc-scholarship"], "must_contain": ["2.5 lakh"], "should_abstain": false}
+{"id": "q17", "question": "What is the income limit for the post matric scholarship for SC students?", "expected_docs": ["post-matric-sc-scholarship"], "must_contain": ["2.5 lakh"], "should_abstain": false}
+{"id": "q18", "question": "I sell vegetables on a footpath in Pune. Can I get a loan without collateral?", "expected_docs": ["pm-svanidhi"], "must_contain": ["10,000"], "should_abstain": false}
+{"id": "q19", "question": "How much interest subsidy do street vendors get on the PM SVANidhi loan?", "expected_docs": ["pm-svanidhi"], "must_contain": ["7 per cent"], "should_abstain": false}
+{"id": "q20", "question": "I am a woman who wants to start a new small manufacturing unit. How much loan can I get from a bank?", "expected_docs": ["stand-up-india"], "must_contain": ["1 crore"], "should_abstain": false}
+{"id": "q21", "question": "Can I get a Stand-Up India loan to buy an existing business?", "expected_docs": ["stand-up-india"], "must_contain": ["greenfield"], "should_abstain": false}
+{"id": "q22", "question": "I am 45 years old and work as a driver with no PF. Is there a pension scheme for me?", "expected_docs": ["atal-pension-yojana"], "must_contain": ["40"], "should_abstain": false}
+{"id": "q23", "question": "Can an income tax payer join Atal Pension Yojana?", "expected_docs": ["atal-pension-yojana"], "must_contain": ["income tax"], "should_abstain": false}
+{"id": "q24", "question": "What is the capital of France?", "expected_docs": [], "must_contain": [], "should_abstain": true}
+{"id": "q25", "question": "How do I renew my passport?", "expected_docs": [], "must_contain": [], "should_abstain": true}
+{"id": "q26", "question": "What is the weather in Chennai today?", "expected_docs": [], "must_contain": [], "should_abstain": true}
+{"id": "q27", "question": "Who won the cricket match last night?", "expected_docs": [], "must_contain": [], "should_abstain": true}
+{"id": "q28", "question": "What is the income tax slab for a freelancer in India?", "expected_docs": [], "must_contain": [], "should_abstain": true}
+{"id": "q29", "question": "Can you write me a Python program to sort a list?", "expected_docs": [], "must_contain": [], "should_abstain": true}
+{"id": "q30", "question": "How do I apply for a new car driving licence in Bengaluru?", "expected_docs": [], "must_contain": [], "should_abstain": true}
