@@ -3,7 +3,7 @@ A RAG system that answers questions about Indian government welfare schemes — 
 
 Built from scratch, no framework, every step readable in one sitting.
 
-Image not available Image not available Image not available Image not available Image not available
+Python 3.9+ · runs offline, no API key · 17 tests passing · hit@5 100% · abstain accuracy 93%
 
 Quickstart · How it works · Results · Design decisions · Roadmap · Learn RAG in a week [blocked]
 
@@ -262,5 +262,3 @@ No LangChain, no LlamaIndex, no vector database server. Deliberately — so you 
 Disclaimer
 A learning project. The scheme summaries are illustrative and may be out of date; verify every figure on the official portal before acting on it. Not affiliated with any government body.
 
-License
-Add a LICENSE file (MIT is the usual choice for a learning repo) to make the terms exp
